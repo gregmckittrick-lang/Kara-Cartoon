@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kara's Summer 2027 Crossroads</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cardinal:#990000; --gold:#FFCC00; --ink:#2a1a14; --paper:#fffaf0;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:#2b1712;color:var(--ink);
+    font-family:'Baloo 2', ui-rounded, 'Segoe UI', system-ui, sans-serif;}
+  body{min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:18px 12px 28px}
+  header{width:100%;max-width:920px;display:flex;justify-content:space-between;align-items:baseline;color:#fff;margin-bottom:10px;gap:10px;flex-wrap:wrap}
+  header h1{margin:0;font-size:clamp(20px,3.4vw,30px);font-weight:800;letter-spacing:.3px}
+  header h1 span{color:var(--gold)}
+  #sceneLabel{font-weight:700;color:#f3d9a8;font-size:15px;background:rgba(255,255,255,.08);padding:3px 12px;border-radius:999px}
+
+  .frame{width:100%;max-width:920px;background:var(--paper);border-radius:22px;padding:10px;box-shadow:0 18px 50px rgba(0,0,0,.45), inset 0 0 0 4px var(--gold)}
+  .stage{position:relative;width:100%;container-type:inline-size;border-radius:16px;overflow:hidden;background:#cfe9ff}
+  .stage svg{display:block;width:100%;height:auto}
+
+  /* ---------- speech bubbles ---------- */
+  .bubble{position:absolute;background:#fff;border:3px solid var(--ink);border-radius:22px;padding:.7em .95em;
+    font-size:clamp(12px,2.15cqw,19px);line-height:1.3;font-weight:600;box-shadow:4px 5px 0 rgba(0,0,0,.18);
+    opacity:0;transform:scale(.6);transform-origin:var(--origin, 20% 100%);transition:opacity .25s, transform .35s cubic-bezier(.3,1.6,.5,1);pointer-events:none}
+  .bubble.show{opacity:1;transform:scale(1);pointer-events:auto}
+  .bubble .who{display:block;font-weight:800;font-size:.78em;letter-spacing:.6px;text-transform:uppercase;margin-bottom:.15em}
+  #karaBubble{left:3%;top:3%;width:41%;--origin:45% 100%}
+  #karaBubble .who{color:var(--cardinal)}
+  #karaBubble::after{content:"";position:absolute;left:46%;bottom:-20px;border:11px solid transparent;border-top:14px solid var(--ink)}
+  #karaBubble::before{content:"";position:absolute;left:calc(46% + 3px);bottom:-13px;border:8px solid transparent;border-top:11px solid #fff;z-index:1}
+  #karaBubble.thought{border-radius:40px;border-style:dashed}
+  #karaBubble.thought::before,#karaBubble.thought::after{border:3px solid var(--ink);background:#fff;border-radius:50%}
+  #karaBubble.thought::after{width:20px;height:20px;left:40%;bottom:-30px}
+  #karaBubble.thought::before{width:11px;height:11px;left:47%;bottom:-48px}
+  #catBubble{right:3%;top:3%;width:47%;--origin:30% 100%}
+  #catBubble .who{color:#c96a08}
+  #catBubble::after{content:"";position:absolute;left:22%;bottom:-20px;border:11px solid transparent;border-top:14px solid var(--ink)}
+  #catBubble::before{content:"";position:absolute;left:calc(22% + 3px);bottom:-13px;border:8px solid transparent;border-top:11px solid #fff;z-index:1}
+  .caret{display:inline-block;width:.45em;animation:blink .8s steps(1) infinite}
+  @keyframes blink{50%{opacity:0}}
+
+  .choices{display:none;gap:.6em;margin-top:.6em}
+  .choices.show{display:flex;animation:rise .3s ease-out}
+  @keyframes rise{from{opacity:0;transform:translateY(6px)}}
+  .choices button{flex:1;font:inherit;font-weight:800;font-size:1em;border:3px solid var(--ink);border-radius:14px;padding:.35em .6em;cursor:pointer;box-shadow:0 4px 0 var(--ink);transition:transform .1s, box-shadow .1s}
+  .choices button:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+  .yes{background:#7ed957}
+  .no{background:#ff8a80}
+  .choices button:hover{filter:brightness(1.07)}
+
+  @container (max-width: 600px){
+    .bubble{position:relative;left:auto!important;right:auto!important;top:auto!important;width:auto!important;margin:8px;display:none;font-size:15px}
+    .bubble.show{display:block}
+    .bubble::before,.bubble::after{display:none}
+  }
+
+  /* ---------- controls ---------- */
+  .controls{display:flex;justify-content:center;gap:10px;margin-top:10px;flex-wrap:wrap;min-height:48px}
+  .ctrl{font:inherit;font-weight:800;font-size:17px;border:3px solid var(--ink);border-radius:999px;padding:6px 22px;cursor:pointer;
+    background:var(--gold);color:var(--ink);box-shadow:0 4px 0 var(--ink);transition:transform .1s, box-shadow .1s}
+  .ctrl.alt{background:#fff}
+  .ctrl:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+  .ctrl[hidden]{display:none}
+  .hint{color:#c9b39a;font-size:13px;margin-top:10px;text-align:center}
+
+  /* ---------- character animation ---------- */
+  #kara{transform-box:fill-box;transform-origin:50% 100%;animation:bob 3.2s ease-in-out infinite}
+  @keyframes bob{50%{transform:translateY(-3px)}}
+  .k-arm-think,.k-arm-cheer{display:none}
+  #kara.thinking .k-arm-down-r{display:none}
+  #kara.thinking .k-arm-think{display:inline}
+  #kara.cheer .k-arm-down-r,#kara.cheer .k-arm-down-l{display:none}
+  #kara.cheer .k-arm-cheer{display:inline}
+  #kara.cheer{animation:hop .55s ease-in-out 3}
+  @keyframes hop{50%{transform:translateY(-14px)}}
+
+  #catWrap{transform-box:fill-box;transform-origin:50% 100%;transform:scale(0);opacity:0}
+  #catWrap.in{animation:popIn .6s cubic-bezier(.3,1.7,.5,1) forwards}
+  #catWrap.out{animation:popOut .35s ease-in forwards}
+  @keyframes popIn{0%{transform:scale(0) translateY(20px);opacity:0}100%{transform:scale(1);opacity:1}}
+  @keyframes popOut{0%{transform:scale(1);opacity:1}100%{transform:scale(0) translateY(20px);opacity:0}}
+  #cat{transform-box:fill-box;transform-origin:50% 100%}
+  #cat.celebrate{animation:catJump .5s ease-in-out infinite}
+  @keyframes catJump{0%,100%{transform:translateY(0)}50%{transform:translateY(-26px) rotate(-4deg)}}
+  #catHead{transform-box:fill-box;transform-origin:50% 90%;transition:transform .5s}
+  #cat.thinking #catHead{transform:rotate(-14deg)}
+  #cat.frown #catHead{transform:rotate(6deg) translateY(3px)}
+  #catTail{transform-box:fill-box;transform-origin:0% 100%;animation:wag 1.4s ease-in-out infinite}
+  #cat.celebrate #catTail{animation-duration:.35s}
+  #cat.frown #catTail{animation:none;transform:rotate(30deg)}
+  @keyframes wag{50%{transform:rotate(-14deg)}}
+  .c-arms-up,.c-arm-think{display:none}
+  #cat.celebrate .c-arms-down{display:none}
+  #cat.celebrate .c-arms-up{display:inline}
+  #cat.thinking .c-arm-r{display:none}
+  #cat.thinking .c-arm-think{display:inline}
+  .c-face{display:none}
+  #cat.f-normal .c-normal,#cat.f-happy .c-happy,#cat.f-smile .c-smile,#cat.f-frown .c-frown,#cat.f-think .c-think{display:inline}
+  #catDots{opacity:0}
+  #cat.thinking #catDots{opacity:1}
+  #catDots circle{animation:dot 1.2s infinite}
+  #catDots circle:nth-child(2){animation-delay:.2s}
+  #catDots circle:nth-child(3){animation-delay:.4s}
+  @keyframes dot{0%,100%{opacity:.25}50%{opacity:1}}
+
+  .k-face{display:none}
+  #kara.f-worried .k-worried,#kara.f-neutral .k-neutral,#kara.f-happy .k-happy,#kara.f-think .k-think,#kara.f-determined .k-determined{display:inline}
+
+  .cloud{animation:drift 40s linear infinite}
+  .cloud.c2{animation-duration:60s;animation-delay:-20s}
+  @keyframes drift{from{transform:translateX(-160px)}to{transform:translateX(900px)}}
+  .flag{transform-box:fill-box;transform-origin:0% 50%;animation:flap 2.4s ease-in-out infinite}
+  @keyframes flap{50%{transform:skewY(6deg) scaleX(.92)}}
+  .confetti{animation:fall linear forwards}
+  @keyframes fall{to{transform:translateY(560px) rotate(720deg)}}
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:.01s!important;animation-iteration-count:1!important}
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Kara's <span>Summer 2027</span> Crossroads</h1>
+  <div id="sceneLabel">Scene 1 of 4</div>
+</header>
+
+<div class="frame">
+  <div class="stage" id="stage">
+    <svg viewBox="0 0 800 500" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Kara standing on a sunny university campus with brick buildings and a clock tower">
+      <defs>
+        <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#9fd3ff"/><stop offset="1" stop-color="#e9f6ff"/>
+        </linearGradient>
+        <linearGradient id="lawn" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#7cc95e"/><stop offset="1" stop-color="#4f9e3d"/>
+        </linearGradient>
+        <pattern id="brick" width="24" height="12" patternUnits="userSpaceOnUse">
+          <rect width="24" height="12" fill="#b9573d"/>
+          <path d="M0 0H24M0 6H24M6 0V6M18 6V12" stroke="#a3472f" stroke-width="1"/>
+        </pattern>
+      </defs>
+
+      <!-- sky -->
+      <rect width="800" height="500" fill="url(#sky)"/>
+      <circle cx="90" cy="70" r="34" fill="#ffe680"/>
+      <circle cx="90" cy="70" r="46" fill="#ffe680" opacity=".25"/>
+      <g class="cloud"><ellipse cx="0" cy="60" rx="46" ry="16" fill="#fff"/><ellipse cx="22" cy="48" rx="26" ry="18" fill="#fff"/><ellipse cx="-20" cy="52" rx="20" ry="13" fill="#fff"/></g>
+      <g class="cloud c2"><ellipse cx="0" cy="120" rx="38" ry="12" fill="#fff" opacity=".9"/><ellipse cx="16" cy="110" rx="22" ry="14" fill="#fff" opacity=".9"/></g>
+
+      <!-- left building -->
+      <g>
+        <rect x="20" y="210" width="330" height="180" fill="url(#brick)"/>
+        <rect x="14" y="200" width="342" height="14" fill="#e8d9b5"/>
+        <polygon points="20,200 185,150 350,200" fill="#7a2f22"/>
+        <g fill="#2f4a66" stroke="#e8d9b5" stroke-width="4">
+          <path d="M50 300v-50a16 16 0 0 1 32 0v50z"/><path d="M110 300v-50a16 16 0 0 1 32 0v50z"/>
+          <path d="M228 300v-50a16 16 0 0 1 32 0v50z"/><path d="M288 300v-50a16 16 0 0 1 32 0v50z"/>
+        </g>
+        <path d="M160 390v-80a25 25 0 0 1 50 0v80z" fill="#5a2a1c" stroke="#e8d9b5" stroke-width="5"/>
+        <circle cx="185" cy="185" r="12" fill="#e8d9b5"/>
+      </g>
+
+      <!-- clock tower -->
+      <g>
+        <rect x="560" y="120" width="76" height="270" fill="url(#brick)"/>
+        <rect x="554" y="112" width="88" height="12" fill="#e8d9b5"/>
+        <polygon points="554,112 598,40 642,112" fill="#7a2f22"/>
+        <line x1="598" y1="40" x2="598" y2="22" stroke="#7a2f22" stroke-width="3"/>
+        <circle cx="598" cy="160" r="22" fill="#fffaf0" stroke="#e8d9b5" stroke-width="5"/>
+        <line x1="598" y1="160" x2="598" y2="146" stroke="#2a1a14" stroke-width="3" stroke-linecap="round"/>
+        <line x1="598" y1="160" x2="608" y2="164" stroke="#2a1a14" stroke-width="3" stroke-linecap="round"/>
+        <path d="M584 250v-36a14 14 0 0 1 28 0v36z" fill="#2f4a66" stroke="#e8d9b5" stroke-width="4"/>
+        <path d="M584 330v-36a14 14 0 0 1 28 0v36z" fill="#2f4a66" stroke="#e8d9b5" stroke-width="4"/>
+      </g>
+      <!-- right building -->
+      <g>
+        <rect x="640" y="240" width="170" height="150" fill="url(#brick)"/>
+        <rect x="636" y="232" width="178" height="12" fill="#e8d9b5"/>
+        <g fill="#2f4a66" stroke="#e8d9b5" stroke-width="4">
+          <path d="M665 320v-44a14 14 0 0 1 28 0v44z"/><path d="M720 320v-44a14 14 0 0 1 28 0v44z"/><path d="M775 320v-44a14 14 0 0 1 28 0v44z"/>
+        </g>
+      </g>
+      <!-- trees -->
+      <g>
+        <rect x="392" y="300" width="12" height="90" fill="#6b4226"/>
+        <circle cx="398" cy="280" r="40" fill="#3f8f3a"/><circle cx="372" cy="300" r="26" fill="#4ea544"/><circle cx="424" cy="298" r="28" fill="#4ea544"/>
+        <rect x="508" y="320" width="10" height="70" fill="#6b4226"/>
+        <circle cx="513" cy="305" r="30" fill="#3f8f3a"/><circle cx="530" cy="318" r="20" fill="#4ea544"/>
+      </g>
+      <!-- lamp post with cardinal & gold banners -->
+      <g>
+        <rect x="470" y="250" width="6" height="150" fill="#333"/>
+        <circle cx="473" cy="246" r="9" fill="#fff6c8" stroke="#333" stroke-width="3"/>
+        <rect class="flag" x="476" y="270" width="24" height="44" fill="#990000"/>
+        <rect class="flag" x="476" y="320" width="24" height="44" fill="#FFCC00"/>
+      </g>
+
+      <!-- lawn + path -->
+      <rect x="0" y="385" width="800" height="115" fill="url(#lawn)"/>
+      <polygon points="300,385 440,385 560,500 180,500" fill="#d39b74"/>
+      <path d="M300 385L180 500M440 385L560 500" stroke="#b77c56" stroke-width="3"/>
+      <g fill="#ff6f91"><circle cx="60" cy="420" r="5"/><circle cx="74" cy="430" r="5"/><circle cx="700" cy="440" r="5"/></g>
+      <g fill="#ffd34d"><circle cx="68" cy="424" r="3"/><circle cx="714" cy="430" r="5"/><circle cx="726" cy="444" r="4"/></g>
+
+      <!-- ================= KARA ================= -->
+      <g transform="translate(275,478)">
+       <ellipse cx="0" cy="2" rx="50" ry="8" fill="#000" opacity=".15"/>
+       <g id="kara" class="f-worried">
+        <!-- back hair -->
+        <path d="M-40,-190 Q-46,-120 -30,-112 L30,-112 Q46,-120 40,-190 Z" fill="#3b2417"/>
+        <!-- legs & shoes -->
+        <rect x="-20" y="-72" width="16" height="66" rx="5" fill="#2f4a7a"/>
+        <rect x="4" y="-72" width="16" height="66" rx="5" fill="#2f4a7a"/>
+        <ellipse cx="-14" cy="-5" rx="13" ry="7" fill="#fff" stroke="#333" stroke-width="2"/>
+        <ellipse cx="14" cy="-5" rx="13" ry="7" fill="#fff" stroke="#333" stroke-width="2"/>
+        <!-- backpack -->
+        <rect x="-44" y="-140" width="18" height="56" rx="7" fill="#FFCC00" stroke="#c99b00" stroke-width="2"/>
+        <!-- torso: cardinal sweater -->
+        <path d="M-34,-66 L-31,-138 Q0,-152 31,-138 L34,-66 Q0,-60 -34,-66Z" fill="#990000"/>
+        <rect x="-33" y="-102" width="66" height="7" fill="#FFCC00"/>
+        <path d="M-12,-145 L0,-130 L12,-145" fill="none" stroke="#fff" stroke-width="3"/>
+        <path d="M-24,-140 L-22,-80" stroke="#c99b00" stroke-width="4"/>
+        <!-- arms -->
+        <g class="k-arm-down-l"><path d="M-30,-134 Q-44,-108 -40,-80" fill="none" stroke="#990000" stroke-width="14" stroke-linecap="round"/><circle cx="-40" cy="-76" r="7" fill="#f2c9a8"/></g>
+        <g class="k-arm-down-r"><path d="M30,-134 Q44,-108 40,-80" fill="none" stroke="#990000" stroke-width="14" stroke-linecap="round"/><circle cx="40" cy="-76" r="7" fill="#f2c9a8"/></g>
+        <g class="k-arm-think"><path d="M30,-134 Q48,-104 26,-118 Q14,-140 12,-158" fill="none" stroke="#990000" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/><circle cx="11" cy="-162" r="7" fill="#f2c9a8"/></g>
+        <g class="k-arm-cheer"><path d="M-30,-134 Q-50,-160 -46,-196" fill="none" stroke="#990000" stroke-width="14" stroke-linecap="round"/><circle cx="-46" cy="-200" r="7" fill="#f2c9a8"/>
+          <path d="M30,-134 Q50,-160 46,-196" fill="none" stroke="#990000" stroke-width="14" stroke-linecap="round"/><circle cx="46" cy="-200" r="7" fill="#f2c9a8"/></g>
+        <!-- neck & head -->
+        <rect x="-7" y="-160" width="14" height="16" fill="#f2c9a8"/>
+        <circle cx="0" cy="-188" r="34" fill="#f5d2b6"/>
+        <!-- bangs -->
+        <path d="M-36,-190 Q-34,-230 0,-224 Q34,-230 36,-190 Q24,-210 4,-206 Q-14,-214 -36,-190Z" fill="#3b2417"/>
+        <circle cx="30" cy="-208" r="5" fill="#FFCC00"/>
+        <ellipse cx="-20" cy="-176" rx="6" ry="3.5" fill="#ff9e9e" opacity=".6"/>
+        <ellipse cx="20" cy="-176" rx="6" ry="3.5" fill="#ff9e9e" opacity=".6"/>
+        <!-- faces -->
+        <g class="k-face k-worried" stroke="#2a1a14" stroke-linecap="round" fill="none" stroke-width="2.5">
+          <circle cx="-12" cy="-188" r="3.5" fill="#2a1a14" stroke="none"/><circle cx="12" cy="-188" r="3.5" fill="#2a1a14" stroke="none"/>
+          <path d="M-19,-197 L-7,-201"/><path d="M19,-197 L7,-201"/>
+          <path d="M-8,-168 Q0,-174 8,-168"/>
+        </g>
+        <g class="k-face k-neutral" stroke="#2a1a14" stroke-linecap="round" fill="none" stroke-width="2.5">
+          <circle cx="-12" cy="-188" r="3.5" fill="#2a1a14" stroke="none"/><circle cx="12" cy="-188" r="3.5" fill="#2a1a14" stroke="none"/>
+          <path d="M-18,-198 L-7,-199"/><path d="M18,-198 L7,-199"/>
+          <path d="M-6,-170 Q0,-166 6,-170"/>
+        </g>
+        <g class="k-face k-happy" stroke="#2a1a14" stroke-linecap="round" fill="none" stroke-width="2.5">
+          <path d="M-16,-187 Q-12,-192 -8,-187"/><path d="M8,-187 Q12,-192 16,-187"/>
+          <path d="M-18,-199 L-7,-201"/><path d="M18,-199 L7,-201"/>
+          <path d="M-10,-172 Q0,-160 10,-172 Z" fill="#c0392b"/>
+        </g>
+        <g class="k-face k-think" stroke="#2a1a14" stroke-linecap="round" fill="none" stroke-width="2.5">
+          <circle cx="-10" cy="-191" r="3.5" fill="#2a1a14" stroke="none"/><circle cx="14" cy="-191" r="3.5" fill="#2a1a14" stroke="none"/>
+          <path d="M-18,-200 L-6,-198"/><path d="M8,-203 Q14,-206 20,-202"/>
+          <path d="M-7,-169 L5,-171"/>
+        </g>
+        <g class="k-face k-determined" stroke="#2a1a14" stroke-linecap="round" fill="none" stroke-width="2.5">
+          <circle cx="-12" cy="-188" r="3.5" fill="#2a1a14" stroke="none"/><circle cx="12" cy="-188" r="3.5" fill="#2a1a14" stroke="none"/>
+          <path d="M-19,-200 L-7,-197"/><path d="M19,-200 L7,-197"/>
+          <path d="M-8,-171 Q0,-164 8,-171"/>
+        </g>
+       </g>
+      </g>
+
+      <!-- ================= CAT ================= -->
+      <g transform="translate(470,478)">
+       <g id="catWrap">
+        <ellipse cx="0" cy="2" rx="40" ry="7" fill="#000" opacity=".15"/>
+        <g id="cat" class="f-normal">
+          <path id="catTail" d="M26,-28 Q62,-40 56,-80 Q52,-100 66,-108" fill="none" stroke="#f0962e" stroke-width="12" stroke-linecap="round"/>
+          <!-- body -->
+          <ellipse cx="0" cy="-38" rx="34" ry="38" fill="#f6a945"/>
+          <ellipse cx="0" cy="-30" rx="20" ry="25" fill="#ffe6c7"/>
+          <path d="M-30,-50 q8,4 12,0 M30,-50 q-8,4 -12,0 M-32,-34 q8,4 12,0 M32,-34 q-8,4 -12,0" stroke="#d97e1c" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <ellipse cx="-16" cy="-3" rx="13" ry="7" fill="#f6a945" stroke="#d97e1c" stroke-width="2"/>
+          <ellipse cx="16" cy="-3" rx="13" ry="7" fill="#f6a945" stroke="#d97e1c" stroke-width="2"/>
+          <!-- arms -->
+          <g class="c-arms-down">
+            <path d="M-26,-56 Q-34,-36 -22,-24" fill="none" stroke="#f6a945" stroke-width="11" stroke-linecap="round"/>
+            <path class="c-arm-r" d="M26,-56 Q34,-36 22,-24" fill="none" stroke="#f6a945" stroke-width="11" stroke-linecap="round"/>
+            <path class="c-arm-think" d="M26,-56 Q38,-60 18,-80" fill="none" stroke="#f6a945" stroke-width="11" stroke-linecap="round"/>
+          </g>
+          <g class="c-arms-up">
+            <path d="M-26,-58 Q-44,-80 -40,-104" fill="none" stroke="#f6a945" stroke-width="11" stroke-linecap="round"/>
+            <path d="M26,-58 Q44,-80 40,-104" fill="none" stroke="#f6a945" stroke-width="11" stroke-linecap="round"/>
+          </g>
+          <!-- head -->
+          <g id="catHead">
+            <polygon points="-30,-118 -26,-152 -6,-128" fill="#f6a945"/>
+            <polygon points="30,-118 26,-152 6,-128" fill="#f6a945"/>
+            <polygon points="-25,-124 -23,-143 -12,-129" fill="#ffb3c1"/>
+            <polygon points="25,-124 23,-143 12,-129" fill="#ffb3c1"/>
+            <circle cx="0" cy="-100" r="33" fill="#f6a945"/>
+            <path d="M-8,-130 l3,10 M0,-132 v10 M8,-130 l-3,10" stroke="#d97e1c" stroke-width="3" stroke-linecap="round"/>
+            <ellipse cx="0" cy="-88" rx="16" ry="11" fill="#ffe6c7"/>
+            <path d="M-4,-94 h8 l-4,5z" fill="#ff7b9c"/>
+            <g stroke="#7a4a1c" stroke-width="1.6" stroke-linecap="round">
+              <path d="M-14,-90 h-20 M-14,-86 l-19,4"/><path d="M14,-90 h20 M14,-86 l19,4"/>
+            </g>
+            <ellipse cx="-20" cy="-90" rx="5" ry="3" fill="#ff9e9e" opacity=".6"/>
+            <ellipse cx="20" cy="-90" rx="5" ry="3" fill="#ff9e9e" opacity=".6"/>
+            <!-- faces -->
+            <g class="c-face c-normal">
+              <ellipse cx="-12" cy="-104" rx="5" ry="7" fill="#2a1a14"/><ellipse cx="12" cy="-104" rx="5" ry="7" fill="#2a1a14"/>
+              <circle cx="-10" cy="-107" r="1.8" fill="#fff"/><circle cx="14" cy="-107" r="1.8" fill="#fff"/>
+              <path d="M-6,-86 q3,4 6,0 q3,4 6,0" fill="none" stroke="#2a1a14" stroke-width="2" stroke-linecap="round"/>
+            </g>
+            <g class="c-face c-happy" fill="none" stroke="#2a1a14" stroke-width="3" stroke-linecap="round">
+              <path d="M-17,-102 q5,-8 10,0"/><path d="M7,-102 q5,-8 10,0"/>
+              <path d="M-8,-87 q8,12 16,0z" fill="#c0392b" stroke-width="2"/>
+            </g>
+            <g class="c-face c-smile">
+              <ellipse cx="-12" cy="-104" rx="5" ry="6" fill="#2a1a14"/><ellipse cx="12" cy="-104" rx="5" ry="6" fill="#2a1a14"/>
+              <circle cx="-10" cy="-106" r="1.8" fill="#fff"/><circle cx="14" cy="-106" r="1.8" fill="#fff"/>
+              <path d="M-8,-87 q8,8 16,0" fill="none" stroke="#2a1a14" stroke-width="2.4" stroke-linecap="round"/>
+            </g>
+            <g class="c-face c-frown" stroke="#2a1a14" stroke-linecap="round" fill="none" stroke-width="2.4">
+              <ellipse cx="-12" cy="-103" rx="4.5" ry="5" fill="#2a1a14" stroke="none"/><ellipse cx="12" cy="-103" rx="4.5" ry="5" fill="#2a1a14" stroke="none"/>
+              <path d="M-19,-110 L-7,-115"/><path d="M19,-110 L7,-115"/>
+              <path d="M-7,-82 q7,-7 14,0"/>
+            </g>
+            <g class="c-face c-think" stroke="#2a1a14" stroke-linecap="round" fill="none" stroke-width="2.4">
+              <ellipse cx="-10" cy="-106" rx="4.5" ry="6" fill="#2a1a14" stroke="none"/><ellipse cx="14" cy="-106" rx="4.5" ry="6" fill="#2a1a14" stroke="none"/>
+              <path d="M-17,-116 L-5,-115"/><path d="M8,-118 q6,-4 12,0"/>
+              <path d="M-5,-85 h10"/>
+            </g>
+          </g>
+          <g id="catDots" fill="#2a1a14"><circle cx="40" cy="-140" r="4"/><circle cx="52" cy="-150" r="5"/><circle cx="66" cy="-162" r="6"/></g>
+        </g>
+       </g>
+      </g>
+
+      <g id="confettiLayer"></g>
+    </svg>
+
+    <div class="bubble" id="karaBubble" aria-live="polite"><span class="who">Kara</span><span class="txt"></span></div>
+    <div class="bubble" id="catBubble" aria-live="polite"><span class="who">Career Cat</span><span class="txt"></span>
+      <div class="choices" id="choices">
+        <button class="yes" id="yesBtn">Yes</button>
+        <button class="no" id="noBtn">No</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="ctrl" id="nextBtn">Next ▶</button>
+    <button class="ctrl alt" id="otherBtn" hidden>↩ Try the other answer</button>
+    <button class="ctrl alt" id="restartBtn" hidden>⟲ Play again</button>
+  </div>
+</div>
+<div class="hint">Tip: click a speech bubble to skip the typing.</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const kara = $('kara'), cat = $('cat'), catWrap = $('catWrap');
+  const kB = $('karaBubble'), cB = $('catBubble'), choices = $('choices');
+  const nextBtn = $('nextBtn'), otherBtn = $('otherBtn'), restartBtn = $('restartBtn');
+  const sceneLabel = $('sceneLabel');
+  let typer = null, timers = [], onNext = null, lastQuestion = null;
+
+  const T = {
+    s1:  "I've been trying so hard, but no Summer 2027 internships yet. What more can I do?",
+    s2q: "Will you consider applying for international Summer 2027 internship programs?",
+    s2y: "Yay! 🎉 Great choice! Going international, you'll successfully land a job offer and stay right on track to graduate on time with your class!",
+    s2n: "Hmm… what about an off-cycle internship for Fall 2027? You'd only delay graduation by one semester, but you'd have a real job after graduation.",
+    s3:  "Is there any other choice that keeps me graduating with my class at USC? Hmmm…",
+    s4q: "Will you consider going directly into graduate school after USC?",
+    s4y: "OK, that's possible! But you'll need excellent grades and professor recommendations to get into an Ivy-level graduate program.",
+    s4n: "Hmm… what will you do then?"
+  };
+
+  function later(fn, ms){ const t = setTimeout(fn, ms); timers.push(t); }
+  function clearTimers(){ timers.forEach(clearTimeout); timers = []; document.getElementById('confettiLayer').innerHTML = ''; if (typer) { typer.stop(); typer = null; } }
+
+  function setFace(el, face){ el.className.baseVal = el.className.baseVal.replace(/\bf-\w+/g,'').trim() + ' f-' + face; }
+  function setPose(el, poses){ // keep face class, replace pose classes
+    const face = (el.className.baseVal.match(/\bf-\w+/)||[''])[0];
+    el.className.baseVal = [face, ...poses].join(' ').trim();
+  }
+
+  function showCat(){ catWrap.classList.remove('out'); void catWrap.getBBox(); catWrap.classList.add('in'); }
+  function hideCat(){ if (catWrap.classList.contains('in')) { catWrap.classList.remove('in'); catWrap.classList.add('out'); } }
+
+  function say(bubble, text, done){
+    const span = bubble.querySelector('.txt');
+    bubble.classList.add('show');
+    span.textContent = '';
+    let i = 0, stopped = false;
+    const chars = Array.from(text);
+    const caret = document.createElement('span'); caret.className = 'caret'; caret.textContent = '▍';
+    span.appendChild(caret);
+    const finish = () => { if (stopped) return; stopped = true; span.textContent = text; bubble.onclick = null; done && done(); };
+    const step = () => {
+      if (stopped) return;
+      if (i >= chars.length) return finish();
+      caret.before(chars[i++]);
+      typer.t = setTimeout(step, chars[i-1].match(/[.,?!…]/) ? 160 : 26);
+    };
+    typer = { t: null, stop(){ stopped = true; clearTimeout(this.t); } };
+    bubble.onclick = () => { if (typer) clearTimeout(typer.t); finish(); };
+    step();
+  }
+  function hideBubbles(){ kB.classList.remove('show','thought'); cB.classList.remove('show'); choices.classList.remove('show'); }
+
+  function controls({next=false, other=false, restart=false}={}){
+    nextBtn.hidden = !next; otherBtn.hidden = !other; restartBtn.hidden = !restart;
+  }
+
+  function confetti(){
+    const layer = $('confettiLayer'); const colors = ['#990000','#FFCC00','#7ed957','#4fc3f7','#ff7b9c','#fff'];
+    for (let n = 0; n < 70; n++){
+      const r = document.createElementNS('http://www.w3.org/2000/svg','rect');
+      const x = Math.random()*800, w = 6+Math.random()*6;
+      r.setAttribute('x', x); r.setAttribute('y', -20 - Math.random()*120);
+      r.setAttribute('width', w); r.setAttribute('height', w*0.5);
+      r.setAttribute('fill', colors[n % colors.length]);
+      r.setAttribute('class','confetti');
+      r.style.transformBox = 'fill-box'; r.style.transformOrigin = 'center';
+      r.style.animationDuration = (2.2 + Math.random()*1.8) + 's';
+      r.style.animationDelay = (Math.random()*0.8) + 's';
+      layer.appendChild(r);
+    }
+    later(() => { layer.innerHTML = ''; }, 5000);
+  }
+
+  // ---------- scenes ----------
+  function scene1(){
+    reset();
+    sceneLabel.textContent = 'Scene 1 of 4';
+    setFace(kara,'worried');
+    later(() => say(kB, T.s1, () => controls({next:true})), 400);
+    onNext = scene2;
+  }
+
+  function scene2(){
+    clearTimers(); hideBubbles(); controls();
+    sceneLabel.textContent = 'Scene 2 of 4';
+    setPose(kara, []); setFace(kara,'neutral');
+    setPose(cat, []); setFace(cat,'normal');
+    showCat();
+    lastQuestion = scene2Question;
+    later(scene2Question, 650);
+  }
+  function scene2Question(){
+    clearTimers(); hideBubbles(); controls();
+    sceneLabel.textContent = 'Scene 2 of 4';
+    setPose(kara, []); setFace(kara,'neutral');
+    setPose(cat, []); setFace(cat,'normal');
+    if (!catWrap.classList.contains('in')) showCat();
+    say(cB, T.s2q, () => {
+      choices.classList.add('show');
+      $('yesBtn').onclick = scene2Yes; $('noBtn').onclick = scene2No;
+    });
+  }
+  function scene2Yes(){
+    choices.classList.remove('show');
+    setPose(cat, ['celebrate']); setFace(cat,'happy');
+    setPose(kara, ['cheer']); setFace(kara,'happy');
+    confetti();
+    say(cB, T.s2y, () => controls({other:true, restart:true}));
+    otherBtn.onclick = scene2Question;
+  }
+  function scene2No(){
+    choices.classList.remove('show');
+    setPose(cat, ['thinking']); setFace(cat,'think');
+    setFace(kara,'neutral');
+    cB.querySelector('.txt').textContent = '';
+    later(() => {
+      setPose(cat, []); setFace(cat,'smile');
+      say(cB, T.s2n, () => controls({next:true, other:true}));
+    }, 1300);
+    otherBtn.onclick = () => { scene2Question(); };
+    onNext = scene3;
+  }
+
+  function scene3(){
+    clearTimers(); hideBubbles(); controls();
+    sceneLabel.textContent = 'Scene 3 of 4';
+    hideCat();
+    setPose(kara, ['thinking']); setFace(kara,'think');
+    kB.classList.add('thought');
+    later(() => say(kB, T.s3, () => controls({next:true})), 600);
+    onNext = scene4;
+  }
+
+  function scene4(){
+    clearTimers(); hideBubbles(); controls();
+    sceneLabel.textContent = 'Scene 4 of 4';
+    setPose(kara, []); setFace(kara,'neutral');
+    setPose(cat, []); setFace(cat,'normal');
+    showCat();
+    later(scene4Question, 650);
+  }
+  function scene4Question(){
+    clearTimers(); hideBubbles(); controls();
+    sceneLabel.textContent = 'Scene 4 of 4';
+    setPose(kara, []); setFace(kara,'neutral');
+    setPose(cat, []); setFace(cat,'normal');
+    if (!catWrap.classList.contains('in')) showCat();
+    say(cB, T.s4q, () => {
+      choices.classList.add('show');
+      $('yesBtn').onclick = scene4Yes; $('noBtn').onclick = scene4No;
+    });
+    otherBtn.onclick = scene4Question;
+  }
+  function scene4Yes(){
+    choices.classList.remove('show');
+    setPose(cat, []); setFace(cat,'smile');
+    setFace(kara,'determined');
+    say(cB, T.s4y, () => controls({other:true, restart:true}));
+  }
+  function scene4No(){
+    choices.classList.remove('show');
+    setPose(cat, ['frown']); setFace(cat,'frown');
+    setFace(kara,'worried');
+    say(cB, T.s4n, () => controls({other:true, restart:true}));
+  }
+
+  function reset(){
+    clearTimers(); hideBubbles(); controls();
+    $('confettiLayer').innerHTML = '';
+    catWrap.classList.remove('in','out');
+    setPose(kara, []); setPose(cat, []);
+  }
+
+  nextBtn.onclick = () => onNext && onNext();
+  restartBtn.onclick = scene1;
+  scene1();
+})();
+</script>
+</body>
+</html>
